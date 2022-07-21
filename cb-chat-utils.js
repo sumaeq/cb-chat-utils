@@ -6,6 +6,8 @@
 // @match        https://chaturbate.com/*
 // @icon         https://www.google.com/s2/favicons?domain=chaturbate.com
 // @require      https://cdnjs.cloudflare.com/ajax/libs/arrive/2.4.1/arrive.min.js
+// @updateURL    https://raw.githubusercontent.com/sumaeq/cb-chat-utils/main/cb-chat-utils.js
+// @downloadURL  https://raw.githubusercontent.com/sumaeq/cb-chat-utils/main/cb-chat-utils.js
 // @grant        GM.setValue
 // @grant        GM.getValue
 // ==/UserScript==
