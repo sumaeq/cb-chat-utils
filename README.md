@@ -1,10 +1,26 @@
-# 💬 Chaturbate Chat Utils
+# 💬 Chaturbate Chat Utils and AutoTipper
 This is a script meant for [Tampermonkey](https://www.tampermonkey.net/) (or any compatible extension).
 It allows filtering or graying out non-user messages (e.g. tip menus, join notifications, follow notices...)
 and adding timestamps to messages in real time.
 
 This script should (_should_) get autoupdated from this repository,
 if you have enabled automatic updates.
+
+### **Important!**
+**You use this userscript at your own risk. Please read Chaturbate's terms of service and use your own judgement whether or not to use this script.**
+The programmer of this script is not responsible for any bans or other forms of punishments that may be issued to users, especially when using features such as the autotipper.
+
+
+---
+
+## How to install
+1. Install [Tampermonkey](https://www.tampermonkey.net/) or any compatible userscript manager
+2. Import the userscript either by
+    - opening [cb-chat-utils.js](cb-chat-utils.js) and copypasting it into a new userscript, or
+    - importing the raw url [https://raw.githubusercontent.com/sumaeq/cb-chat-utils/main/cb-chat-utils.js](https://raw.githubusercontent.com/sumaeq/cb-chat-utils/main/cb-chat-utils.js)
+
+If you want to get automatic updates, usually you have to enable them from the extension settings. However, since this userscript runs on a site with virtual currency, I highly suggest not to enable autoupdates, and instead check the code yourself before copypasting it.
+
 
 ---
 
@@ -27,6 +43,20 @@ This will prepend basic HH:MM:SS timestamps to all messages and notices. Useful 
 
 ### Enable scroll fix
 This will just brutely scroll the chat box to the bottom whenever a new message is appended, to fix scroll lag caused by timestamps and other added stuff.
+
+
+## Autotipper
+![](git-assets/autotipper.png)
+
+The autotipper can be used to repeatedly tip an amount of tokens to the same model.
+The options are as follows:
+- **To user** - the exact username of the model to tip to (usually autofilled if the URL doesn't have extra parameters)
+- **With message** - the tip message, leave empty to not send a message
+- **Tokens per tip** - the amount of tokens to tip on every loop
+- **How many times?** - the repeat count
+- **Timer interval (millis)** - the interval between the loops in milliseconds, e.g. 500 = two tips per second, 100 = 10 tips per second
+
+Launch the autotipper by first clicking on the "chat bubble", and then clicking on the purple "Launch autotipper" button (not visible in the older screenshot above).
 
 ---
 

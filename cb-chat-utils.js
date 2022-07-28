@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CBUtils
-// @version      0.2.0
+// @version      0.3.0
 // @description  CB chat utils. Allows filtering and graying out non-user messages.
 // @author       Suma
 // @match        https://chaturbate.com/*
@@ -98,15 +98,135 @@
                 }
             }),
             $('<button/>')
-                .text('Ok')
+                .text('Launch autotipper')
                 .css({
                     'width': '100%',
                     'box-sizing': 'border-box',
-                    'margin-top': '5px'
+                    'margin-top': '5px',
+                    'background': 'linear-gradient(0deg, rgba(106,29,191,1) 0%, rgba(197,116,252,1) 100%)',
+                    'color': '#ffffff',
+                    'border-radius': '5px',
+                    'border': 'none',
+                    'padding': '4px',
+                    'cursor': 'pointer',
+                    'text-shadow': '0 1px 3px black'
+                })
+                .click(e => {
+                    e.preventDefault();
+                    $autotipper.show();
+                }),
+            $('<button/>')
+                .text('Hide options')
+                .css({
+                    'width': '100%',
+                    'box-sizing': 'border-box',
+                    'margin-top': '5px',
+                    'background': 'linear-gradient(0deg, rgba(38,191,29,1) 0%, rgba(173,252,116,1) 100%)',
+                    'color': '#ffffff',
+                    'border-radius': '5px',
+                    'border': 'none',
+                    'padding': '4px',
+                    'cursor': 'pointer',
+                    'text-shadow': '0 1px 3px black'
                 })
                 .click(e => {
                     e.preventDefault();
                     $settings.fadeOut(50);
+                })
+        )
+        .hide();
+
+    const $autotipper = $('<div data-cbutils-autotipper="true"/>')
+        .css({
+            'z-index': '9999',
+            'position': 'fixed',
+            'display': 'block',
+            'font-size': '8pt !important',
+            'width': '180px',
+            'top': '15px',
+            'left': '15px',
+            'padding': '1em',
+            'background': 'rgba(255, 255, 255, 0.8)',
+            'box-shadow': '2px 2px 15px rgba(0, 0, 0, 0.8)',
+            'backdrop-filter': 'blur(5px)',
+            'border-radius': '5px',
+        })
+        .append(
+            $('<p style="margin-top: 0;"/>').append(
+                'To user<br>',
+                $('<input type="text" data-autotip-field="tipUser"/>').val(`${window.location.href.split('/').filter(p => p.trim() != '').slice(-1)[0]}`)
+            ),
+            $('<p/>').append(
+                'With message<br>',
+                $('<input type="text" data-autotip-field="tipMessage" value="Hello world!"/>')
+            ),
+            $('<p/>').append(
+                'Tokens per tip<br>',
+                $('<input type="number" min="1" max="1000" data-autotip-field="tipTokens" value="1"/>')
+            ),
+            $('<p/>').append(
+                'How many times?<br>',
+                $('<input type="number" min="1" max="1000" data-autotip-field="tipTimes" value="5"/>')
+            ),
+            $('<p/>').append(
+                'Timer interval (millis)<br>',
+                $('<input type="number" min="1" max="10000" data-autotip-field="tipInterval" value="500"/>')
+            ),
+            $('<button/>')
+                .text('Ok (asks first)')
+                .css({
+                    'width': '100%',
+                    'box-sizing': 'border-box',
+                    'margin-top': '5px',
+                    'background': 'linear-gradient(0deg, rgba(38,191,29,1) 0%, rgba(173,252,116,1) 100%)',
+                    'color': '#ffffff',
+                    'border-radius': '5px',
+                    'border': 'none',
+                    'padding': '4px',
+                    'cursor': 'pointer',
+                    'text-shadow': '0 1px 3px black'
+                })
+                .click(e => {
+                    e.preventDefault();
+                    const opts = Object.fromEntries([...document.querySelectorAll('[data-autotip-field]')].map(el => [el.getAttribute('data-autotip-field'), el.matches('[type="number"]') ? parseInt(el.value) : el.value]));
+                    const {
+                        tipMessage,
+                        tipUser,
+                        tipTokens,
+                        tipTimes,
+                        tipInterval
+                    } = opts;
+                    if (!confirm(`ARE YOU SURE?\n\nThis will tip ${tipTimes}x${tipTokens}=${tipTimes*tipTokens} tokens to "${tipUser}", with interval of ${tipInterval}ms and the following message:\n\n"${tipMessage}"`)) return;
+                    for (let i = 0; i < tipTimes; i++) {
+                        setTimeout(() => {
+                            $.post(`https://chaturbate.com/tipping/send_tip/${tipUser}/`, {
+                                csrfmiddlewaretoken: $.cookie('csrftoken'),
+                                tip_amount: tipTokens,
+                                message: tipMessage,
+                                source: 'theater',
+                                tip_type: 'public',
+                                video_mode: 'split'
+                            })
+                        }, i*tipInterval);
+                    }
+                }),
+            $('<button/>')
+                .text('Cancel')
+                .css({
+                    'width': '100%',
+                    'box-sizing': 'border-box',
+                    'margin-top': '5px',
+                    'background': 'linear-gradient(0deg, rgba(98,98,98,1) 0%, rgba(199,199,199,1) 100%)',
+                    'color': '#ffffff',
+                    'border-radius': '5px',
+                    'border': 'none',
+                    'padding': '4px',
+                    'cursor': 'pointer',
+                    'text-shadow': '0 1px 3px black'
+                })
+                .click(e => {
+                    e.preventDefault();
+                    $autotipper.hide();
                 })
         )
         .hide();
@@ -192,6 +312,7 @@
 
         $('body').append($toolIcon);
         $('body').append($settings);
+        $('body').append($autotipper);
         window.addEventListener('resize', () => updatePositions());
 
         GM.getValue('iconPos', (window.innerWidth-50) + 'px;15px')
@@ -211,7 +332,7 @@
             e.preventDefault();
         });
 
-        if (unsafeWindow.initialRoomDossier) {
+        if (unsafeWindow.initialRoomDossier || window.location.href.indexOf('https://chaturbate.com/b/') == 0) {
             const iv = setInterval(() => {
 
                 const chat = $('#ChatTabContents .message-list')[0];
