@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CBUtils
-// @version      0.3.0
+// @version      0.4.1
 // @description  CB chat utils. Allows filtering and graying out non-user messages.
 // @author       Suma
 // @match        https://chaturbate.com/*
@@ -11,6 +11,16 @@
 // @grant        GM.setValue
 // @grant        GM.getValue
 // ==/UserScript==
+
+/*
+ CHANGELOG
+
+  v0.4.1:
+    - Added second autotipper confirmation for bigger tips
+
+  v0.4.0:
+    - Added video filters
+*/
 
 (()=>{
 
@@ -116,6 +126,24 @@
                     $autotipper.show();
                 }),
             $('<button/>')
+                .text('Video filters')
+                .css({
+                    'width': '100%',
+                    'box-sizing': 'border-box',
+                    'margin-top': '5px',
+                    'background': 'linear-gradient(0deg, rgba(19,134,130,1) 0%, rgba(116,223,224,1) 100%)',
+                    'color': '#ffffff',
+                    'border-radius': '5px',
+                    'border': 'none',
+                    'padding': '4px',
+                    'cursor': 'pointer',
+                    'text-shadow': '0 1px 3px black'
+                })
+                .click(e => {
+                    e.preventDefault();
+                    $videoFilters.show();
+                }),
+            $('<button/>')
                 .text('Hide options')
                 .css({
                     'width': '100%',
@@ -187,7 +215,9 @@
                     'text-shadow': '0 1px 3px black'
                 })
                 .click(e => {
+
                     e.preventDefault();
+
                     const opts = Object.fromEntries([...document.querySelectorAll('[data-autotip-field]')].map(el => [el.getAttribute('data-autotip-field'), el.matches('[type="number"]') ? parseInt(el.value) : el.value]));
                     const {
                         tipMessage,
@@ -196,7 +226,18 @@
                         tipTimes,
                         tipInterval
                     } = opts;
+
                     if (!confirm(`ARE YOU SURE?\n\nThis will tip ${tipTimes}x${tipTokens}=${tipTimes*tipTokens} tokens to "${tipUser}", with interval of ${tipInterval}ms and the following message:\n\n"${tipMessage}"`)) return;
+
+                    if (tipTokens >= 5 || tipTimes > 15) {
+                        if (!confirm([
+                            `–––––––– ––––––––`,
+                            `⚠️⚠️⚠️ ARE YOU ABSOLUTELY SURE??? ⚠️⚠️⚠️`,
+                            `–––––––– ––––––––`,
+                            `Your tip tokens (${tipTokens}) or tip times (${tipTimes}) seem a bit high, are you sure? (This autotip process will consume ${tipTimes*tipTokens} tokens in total.)`
+                        ].join('\n'))) return;
+                    }
+
                     for (let i = 0; i < tipTimes; i++) {
                         setTimeout(() => {
                             $.post(`https://chaturbate.com/tipping/send_tip/${tipUser}/`, {
@@ -209,6 +250,7 @@
                             })
                         }, i*tipInterval);
                     }
+
                 }),
             $('<button/>')
                 .text('Cancel')
@@ -227,6 +269,110 @@
                 .click(e => {
                     e.preventDefault();
                     $autotipper.hide();
+                })
+        )
+        .hide();
+
+    const $getVideo = () => document.querySelector('video[src^="blob"]');
+
+    function updateVideoFilters() {
+        const values = Object.fromEntries([...document.querySelectorAll('[data-videofilter-field]')].map(el => {
+            if (el.matches('input[type="checkbox"]')) return [el.getAttribute('data-videofilter-field'), el.checked];
+            return [el.getAttribute('data-videofilter-field'), el.value];
+        }));
+        if (!$getVideo()) return;
+        $getVideo().style.filter = `brightness(${values.brightness}%) contrast(${values.contrast}%) saturate(${values.saturation}%) hue-rotate(${values.hue}deg)`;
+        $getVideo().style.transform = `scaleX(${values.flipX ? -1 : 1}) scaleY(${values.flipY ? -1 : 1})`;
+    }
+
+    const $videoFilters = $('<div data-cbutils-videofilters="true"/>')
+        .css({
+            'z-index': '9999',
+            'position': 'fixed',
+            'display': 'block',
+            'font-size': '8pt !important',
+            'width': '180px',
+            'top': '15px',
+            'left': '15px',
+            'padding': '1em',
+            'background': 'rgba(255, 255, 255, 0.8)',
+            'box-shadow': '2px 2px 15px rgba(0, 0, 0, 0.8)',
+            'backdrop-filter': 'blur(5px)',
+            'border-radius': '5px',
+        })
+        .append(
+            $('<p/>').append(
+                'Brightness<br>',
+                $('<input type="range" data-videofilter-field="brightness" value="100" min="0" max="200" data-default="100" style="width: 100%;"/>')
+                    .bind('input change', e => updateVideoFilters())
+            ),
+            $('<p/>').append(
+                'Contrast<br>',
+                $('<input type="range" data-videofilter-field="contrast" value="100" min="0" max="200" data-default="100" style="width: 100%;"/>')
+                    .bind('input change', e => updateVideoFilters())
+            ),
+            $('<p/>').append(
+                'Saturation<br>',
+                $('<input type="range" data-videofilter-field="saturation" value="100" min="0" max="200" data-default="100" style="width: 100%;"/>')
+                    .bind('input change', e => updateVideoFilters())
+            ),
+            $('<p/>').append(
+                'Hue<br>',
+                $('<input type="range" data-videofilter-field="hue" value="0" min="-180" max="180" data-default="0" style="width: 100%;"/>')
+                    .bind('input change', e => updateVideoFilters())
+            ),
+            $('<label/>').append(
+                $('<input type="checkbox" data-videofilter-field="flipX" data-default="0"/>')
+                    .bind('input change', e => updateVideoFilters()),
+                'Flip X<br>'
+            ),
+            $('<label/>').append(
+                $('<input type="checkbox" data-videofilter-field="flipY" data-default="0"/>')
+                    .bind('input change', e => updateVideoFilters()),
+                'Flip Y'
+            ),
+            $('<button/>')
+                .text('Reset filters')
+                .css({
+                    'width': '100%',
+                    'box-sizing': 'border-box',
+                    'margin-top': '5px',
+                    'background': 'linear-gradient(0deg, rgba(98,98,98,1) 0%, rgba(199,199,199,1) 100%)',
+                    'color': '#ffffff',
+                    'border-radius': '5px',
+                    'border': 'none',
+                    'padding': '4px',
+                    'cursor': 'pointer',
+                    'text-shadow': '0 1px 3px black'
+                })
+                .click(e => {
+                    e.preventDefault();
+                    $('[data-videofilter-field]').each((i, el) => {
+                        if ($(el).is('input[type="checkbox"]')) {
+                            $(el).prop('checked', parseFloat($(el).attr('data-default')) == 1);
+                        } else {
+                            $(el).val(parseFloat($(el).attr('data-default')));
+                        }
+                    });
+                    updateVideoFilters()
+                }),
+            $('<button/>')
+                .text('Hide options')
+                .css({
+                    'width': '100%',
+                    'box-sizing': 'border-box',
+                    'margin-top': '5px',
+                    'background': 'linear-gradient(0deg, rgba(98,98,98,1) 0%, rgba(199,199,199,1) 100%)',
+                    'color': '#ffffff',
+                    'border-radius': '5px',
+                    'border': 'none',
+                    'padding': '4px',
+                    'cursor': 'pointer',
+                    'text-shadow': '0 1px 3px black'
+                })
+                .click(e => {
+                    e.preventDefault();
+                    $videoFilters.hide();
                 })
         )
         .hide();
@@ -313,6 +459,7 @@
         $('body').append($toolIcon);
         $('body').append($settings);
         $('body').append($autotipper);
+        $('body').append($videoFilters);
         window.addEventListener('resize', () => updatePositions());
 
         GM.getValue('iconPos', (window.innerWidth-50) + 'px;15px')
