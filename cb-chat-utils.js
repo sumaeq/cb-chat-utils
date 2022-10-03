@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CBUtils
-// @version      0.4.1
+// @version      0.4.2
 // @description  CB chat utils. Allows filtering and graying out non-user messages.
 // @author       Suma
 // @match        https://chaturbate.com/*
@@ -14,6 +14,9 @@
 
 /*
  CHANGELOG
+
+  v0.4.2
+    - Added whisper & mod chat exceptions
 
   v0.4.1:
     - Added second autotipper confirmation for bigger tips
@@ -36,6 +39,9 @@
     let isDragging = false;
     let wasDragged = false;
     let lastDragged = 0;
+
+    let isChatPoppedOut = false;
+    let chatWindow = null;
 
     const settingsBase = [
         { type: 'checkbox', id: 'enableFade', label: 'Gray out non-user messages', default: true },
@@ -143,6 +149,24 @@
                     e.preventDefault();
                     $videoFilters.show();
                 }),
+            /*$('<button/>')
+                .text('Pop out chat')
+                .css({
+                    'width': '100%',
+                    'box-sizing': 'border-box',
+                    'margin-top': '5px',
+                    'background': 'linear-gradient(0deg, rgba(138,98,98,1) 0%, rgba(255,202,202,1) 100%)',
+                    'color': '#ffffff',
+                    'border-radius': '5px',
+                    'border': 'none',
+                    'padding': '4px',
+                    'cursor': 'pointer',
+                    'text-shadow': '0 1px 3px black'
+                })
+                .click(e => {
+                    e.preventDefault();
+                    popOutChat();
+                }),*/
             $('<button/>')
                 .text('Hide options')
                 .css({
@@ -377,6 +401,107 @@
         )
         .hide();
 
+
+    function popOutChat() {
+
+        const dossier = JSON.parse(initialRoomDossier);
+        const win = window.open('', `Chat: ${dossier.broadcaster_username}`, `toolbar=no,location=no,status=no,menubar=no,scrollbars=no,resizable=yes,width=400,height=600`);
+
+        if (win == null) return;
+
+        win.document.body.parentElement.innerHTML = `<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Chat: ${dossier.broadcaster_username}</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                font-family: 'Arial', 'Helvetica', sans-serif;
+                font-size: 11pt;
+            }
+            #container {
+                position: relative;
+            }
+            #chat {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: calc(100vh - 50px);
+                overflow-y: scroll;
+                line-height: 150%;
+            }
+            #input {
+                position: absolute;
+                left: 0;
+                top: calc(100vh - 50px);
+            }
+            .emojiChat {
+                width: 1.3em;
+                height: 1.3em;
+                vertical-align: middle;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="container">
+            <div id="chat"></div>
+            <div id="input">
+                <input type="text" autocomplete="off" spellcheck="false" id="_input_chat">
+            </div>
+        </div>
+    </body>
+</html>`;
+
+        isChatPoppedOut = true;
+        chatWindow = win;
+
+    }
+
+    /*
+    function popOutChat() {
+
+        if ($('[data-cbutils-chat-popout]').length == 0) {
+            $('body').append(
+                $('<div data-cbutils-chat-popout="true"/>')
+                    .css({
+                        'position': 'fixed',
+                        'top': '100px',
+                        'left': '100px',
+                        'box-shadow': '3px 3px 15px rgba(0, 0, 0, 0.5)',
+                        'width': `${$('#ChatTabContainer').width()}px`,
+                        'height': `${$('#ChatTabContainer').height()}px`
+                    })
+            )
+        }
+
+        const $popout = $('[data-cbutils-chat-popout]');
+
+        $('[data-cbutils-chat-popout]').append($('#ChatTabContainer'));
+        $('#ChatTabContainer').css('width', '100%');
+        $('#ChatTabContainer').css('position', 'relative');
+        $('#ChatTabContainer').css('margin', '0').css('padding', '0');
+
+        // fix the width
+        function fixPopoutSize() {
+            $('#ChatTabContainer').css('width', '100%');
+            $('#ChatTabContainer').css('height', '');
+            $('#ChatTabContainer').css('position', 'relative');
+            $('#ChatTabContainer').css('margin', '0').css('padding', '0');
+            $('#ChatTabContainer .window').css('height', `${$popout.height()-50}px`);
+            $('#ChatTabContainer .msg-list-wrapper-split').css('height', `${$popout.height()-50}px`);
+            $('#ChatTabContainer .chat-input-field, #ChatTabContainer .inputDiv').css('width', `calc(100% - 25px)`);
+        }
+
+        const observer = new MutationObserver(mut => fixPopoutSize());
+        observer.observe($('#ChatTabContainer')[0], { attributes: true, attributeFilter: ['style'] });
+
+
+    }
+    */
+
     function updatePositions(settingsOnly = false) {
 
         let ballX = parseFloat($toolIcon.css('left'));
@@ -495,6 +620,34 @@
 
     });
 
+    function cloneWithStyles(base) {
+
+        const cloneStyles = [
+            'color', 'background', 'font-weight', 'font-family', 'display', 'margin-left', 'margin-right', 'padding-left', 'padding-right'
+        ];
+
+        const clone = base.cloneNode(false);
+        const baseStyle = (() => {
+            try {
+                return unsafeWindow.getComputedStyle(base);
+            } catch(err) {}
+            return {};
+        })();
+
+        //if (baseStyle.cssText) clone.style.cssText = baseStyle.cssText;
+        if (base.style) {
+            clone.style.cssText = ``;
+            for (const st of cloneStyles) {
+                clone.style.setProperty(st, baseStyle.getPropertyValue(st));
+            }
+        }
+
+        for (const ch of base.childNodes) clone.appendChild(cloneWithStyles(ch));
+
+        return clone;
+
+    }
+
     function onChatFound(chat){
         GM.getValue('utilSettings', '{}')
             .then(loadedSettings => {
@@ -520,10 +673,25 @@
                     const $msg = $(chatElem).closest('.msg-text');
                     const text = $msg.text();
 
+                    if (chatWindow && isChatPoppedOut) {
+
+                        const cloneElem = cloneWithStyles(chatElem);
+                        cloneElem.querySelectorAll('.isTip').forEach(el => el.style.padding = `2px 3px`);
+                        cloneElem.style.margin = `0.5em 0`;
+
+                        const _chat = chatWindow.document.querySelector('#chat');
+                        _chat.appendChild(cloneElem);
+                        _chat.scrollTop = _chat.scrollHeight;
+
+                    }
+
                     // if the message is not related to a user
-                    if (!$msg.is('[data-nick]') && text.indexOf('removed') == -1 && text.indexOf('tipped for') == -1) {
+                    if (!$msg.is('[data-nick]')
+                        && text.indexOf('removed') == -1
+                        && text.indexOf('tipped for') == -1
+                        && text.indexOf('says to mods') == -1
+                        && text.toLowerCase().indexOf('whisper') == -1) {
                         if (settings.enableFade) {
-                            console.log('! fade');
                             $msg.css('opacity', '0.3').css('filter', 'grayscale(100%)');
                         }
                         $msg.addClass('__x_non_user_message');
