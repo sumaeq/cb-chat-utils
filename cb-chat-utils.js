@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CBUtils
-// @version      0.4.2
+// @version      0.5.0
 // @description  CB chat utils. Allows filtering and graying out non-user messages.
 // @author       Suma
 // @match        https://chaturbate.com/*
@@ -14,6 +14,9 @@
 
 /*
  CHANGELOG
+
+  v0.5.0
+    - Fixed issue #1 (Chaturbate had changed the selector of the chat tab from an ID to a class)
 
   v0.4.2
     - Added whisper & mod chat exceptions
@@ -607,7 +610,7 @@
         if (unsafeWindow.initialRoomDossier || window.location.href.indexOf('https://chaturbate.com/b/') == 0) {
             const iv = setInterval(() => {
 
-                const chat = $('#ChatTabContents .message-list')[0];
+                const chat = $('.ChatTabContents.TheatermodeChatDivChat .message-list')[0];
                 if (chat) {
                     clearInterval(iv);
                     onChatFound(chat);
