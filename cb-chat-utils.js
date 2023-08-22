@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CBUtils
-// @version      0.5.0
+// @version      0.5.1
 // @description  CB chat utils. Allows filtering and graying out non-user messages.
 // @author       Suma
 // @match        https://chaturbate.com/*
@@ -14,6 +14,9 @@
 
 /*
  CHANGELOG
+
+  v0.5.1
+    - Added the "Offline notes" tool
 
   v0.5.0
     - Fixed issue #1 (Chaturbate had changed the selector of the chat tab from an ID to a class)
@@ -117,7 +120,7 @@
                 }
             }),
             $('<button/>')
-                .text('Launch autotipper')
+                .text('Autotipper')
                 .css({
                     'width': '100%',
                     'box-sizing': 'border-box',
@@ -133,6 +136,25 @@
                 .click(e => {
                     e.preventDefault();
                     $autotipper.show();
+                }),
+            $('<button/>')
+                .text('Offline notes')
+                .css({
+                    'width': '100%',
+                    'box-sizing': 'border-box',
+                    'margin-top': '5px',
+                    'background': 'linear-gradient(0deg, #261386 0%, #6750de 100%)',
+                    'color': '#ffffff',
+                    'border-radius': '5px',
+                    'border': 'none',
+                    'padding': '4px',
+                    'cursor': 'pointer',
+                    'text-shadow': '0 1px 3px black'
+                })
+                .click(e => {
+                    e.preventDefault();
+                    updateOfflineNotes();
+                    $offlineNotes.show();
                 }),
             $('<button/>')
                 .text('Video filters')
@@ -152,7 +174,8 @@
                     e.preventDefault();
                     $videoFilters.show();
                 }),
-            /*$('<button/>')
+            /*
+            $('<button/>')
                 .text('Pop out chat')
                 .css({
                     'width': '100%',
@@ -169,14 +192,15 @@
                 .click(e => {
                     e.preventDefault();
                     popOutChat();
-                }),*/
+                }),
+            */
             $('<button/>')
-                .text('Hide options')
+                .text('Hide menu')
                 .css({
                     'width': '100%',
                     'box-sizing': 'border-box',
                     'margin-top': '5px',
-                    'background': 'linear-gradient(0deg, rgba(38,191,29,1) 0%, rgba(173,252,116,1) 100%)',
+                    'background': 'linear-gradient(0deg, rgba(98,98,98,1) 0%, rgba(199,199,199,1) 100%)',
                     'color': '#ffffff',
                     'border-radius': '5px',
                     'border': 'none',
@@ -207,6 +231,7 @@
             'border-radius': '5px',
         })
         .append(
+            $('<p style="margin-bottom: 4px; margin-top: 0;"><b>AutoTipper</b></p>'),
             $('<p style="margin-top: 0;"/>').append(
                 'To user<br>',
                 $('<input type="text" data-autotip-field="tipUser"/>').val(`${window.location.href.split('/').filter(p => p.trim() != '').slice(-1)[0]}`)
@@ -296,6 +321,124 @@
                 .click(e => {
                     e.preventDefault();
                     $autotipper.hide();
+                })
+        )
+        .hide();
+
+
+    async function updateOfflineNotes() {
+
+        const x = await fetch(`https://chaturbate.com/api/notes/usernames/`);
+        if (!x.ok) return;
+
+        const usersJson = await x.json();
+        if (!usersJson || !usersJson.usernames) return;
+
+        const notedUsernames = usersJson.usernames;
+        notedUsernames.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+
+        $('[data-notes-field="username"] option').remove();
+        $('[data-notes-field="username"]').append(`<option selected disabled>--- Select user ---</option>`);
+        for (const username of notedUsernames) {
+            $('[data-notes-field="username"]').append(
+                $('<option/>')
+                    .attr('value', username)
+                    .text(`${username}`)
+            );
+        }
+
+    }
+
+    const $offlineNotes = $('<div data-cbutils-offline-notes="true"/>')
+        .css({
+            'z-index': '9999',
+            'position': 'fixed',
+            'display': 'block',
+            'font-size': '8pt !important',
+            'width': '180px',
+            'top': '15px',
+            'left': '15px',
+            'padding': '1em',
+            'background': 'rgba(255, 255, 255, 0.8)',
+            'box-shadow': '2px 2px 15px rgba(0, 0, 0, 0.8)',
+            'backdrop-filter': 'blur(5px)',
+            'border-radius': '5px',
+        })
+        .append(
+            $('<p style="margin-bottom: 4px; margin-top: 0;"><b>Offline Notes</b></p>'),
+            $('<p style="margin-top: 0;"/>').append(
+                'Username<br>',
+                $('<select data-notes-field="username" style="max-width: 100%; box-sizing: border-box;"/>')
+                    .append(`<option selected disabled>--- Select user ---</option>`)
+            ),
+            $('<textarea data-notes-field="notes" disabled placeholder="Select user..."/>')
+                .css({
+                    'display': 'block',
+                    'width': '100%',
+                    'min-height': '100px',
+                    'font-family': `'UbuntuRegular', 'Arial', sans-serif`,
+                    'font-size': '9pt',
+                    'box-sizing': 'border-box'
+                }),
+            $('<button/>')
+                .text('Fetch')
+                .css({
+                    'width': '100%',
+                    'box-sizing': 'border-box',
+                    'margin-top': '5px',
+                    'background': 'linear-gradient(0deg, rgba(38,191,29,1) 0%, rgba(173,252,116,1) 100%)',
+                    'color': '#ffffff',
+                    'border-radius': '5px',
+                    'border': 'none',
+                    'padding': '4px',
+                    'cursor': 'pointer',
+                    'text-shadow': '0 1px 3px black'
+                })
+                .click(e => {
+
+                    e.preventDefault();
+
+                    const opts = Object.fromEntries([...document.querySelectorAll('[data-notes-field]')].map(el => [el.getAttribute('data-notes-field'), el.matches('[type="number"]') ? parseInt(el.value) : el.value]));
+                    const {
+                        username
+                    } = opts;
+
+                    $('[data-cbutils-offline-notes]').val(``);
+
+                    if (username.trim() == '') {
+                        alert(`The username field cannot be empty!`);
+                        return;
+                    }
+
+                    fetchUserNotes(username)
+                        .then(notesText => {
+                            if (!notesText) {
+                                notesText = `[an error occurred]`;
+                            }
+                            $('[data-cbutils-offline-notes] textarea[data-notes-field="notes"]').val(`${notesText}`);
+                        })
+                        .catch(err => {
+                            alert(`An error occurred: ${err}`);
+                        })
+
+                }),
+            $('<button/>')
+                .text('Exit')
+                .css({
+                    'width': '100%',
+                    'box-sizing': 'border-box',
+                    'margin-top': '5px',
+                    'background': 'linear-gradient(0deg, rgba(98,98,98,1) 0%, rgba(199,199,199,1) 100%)',
+                    'color': '#ffffff',
+                    'border-radius': '5px',
+                    'border': 'none',
+                    'padding': '4px',
+                    'cursor': 'pointer',
+                    'text-shadow': '0 1px 3px black'
+                })
+                .click(e => {
+                    e.preventDefault();
+                    $offlineNotes.hide();
                 })
         )
         .hide();
@@ -395,7 +538,7 @@
                     'border': 'none',
                     'padding': '4px',
                     'cursor': 'pointer',
-                    'text-shadow': '0 1px 3px black'
+                    'text-shadow': '0 1px 3px black',
                 })
                 .click(e => {
                     e.preventDefault();
@@ -588,6 +731,7 @@
         $('body').append($settings);
         $('body').append($autotipper);
         $('body').append($videoFilters);
+        $('body').append($offlineNotes);
         window.addEventListener('resize', () => updatePositions());
 
         GM.getValue('iconPos', (window.innerWidth-50) + 'px;15px')
@@ -648,6 +792,18 @@
         for (const ch of base.childNodes) clone.appendChild(cloneWithStyles(ch));
 
         return clone;
+
+    }
+
+    async function fetchUserNotes(username) {
+
+        const x = await fetch(`https://chaturbate.com/api/notes/for_user/${encodeURIComponent(username)}/`);
+        if (!x.ok) return null;
+
+        const respJson = await x.json();
+        if (!respJson.success) return null;
+
+        return respJson.text ?? '(empty)';
 
     }
 
