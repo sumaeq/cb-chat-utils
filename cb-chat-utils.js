@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CBUtils
-// @version      0.5.1
+// @version      0.5.2
 // @description  CB chat utils. Allows filtering and graying out non-user messages.
 // @author       Suma
 // @match        https://chaturbate.com/*
@@ -14,6 +14,9 @@
 
 /*
  CHANGELOG
+
+  v0.5.2
+    - Update chat selector to work with the newest CB frontend
 
   v0.5.1
     - Added the "Offline notes" tool
@@ -754,7 +757,8 @@
         if (unsafeWindow.initialRoomDossier || window.location.href.indexOf('https://chaturbate.com/b/') == 0) {
             const iv = setInterval(() => {
 
-                const chat = $('.ChatTabContents.TheatermodeChatDivChat .message-list')[0];
+                //const chat = $('.ChatTabContents.TheatermodeChatDivChat .message-list')[0];
+                const chat = $('#ChatTabContainer')[0];
                 if (chat) {
                     clearInterval(iv);
                     onChatFound(chat);
